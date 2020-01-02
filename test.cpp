@@ -86,7 +86,7 @@ void Test::testG8M(std::string picPath)
 //        fitting::ModelFitting::extractBFMKeyModel(bfmShape,BFMkeys,bfmKeyShape);
         //-----------------
         FaceModel shape;
-        shape.InitializeG8M("data\\G8M_BlendShapes.npz",false);
+        shape.InitializeG8M("data\\G8M_BlendShapes1.npz",false);
         Eigen::Matrix3Xf points=shape.Face.transpose();
 
         FaceModel keyShape;
@@ -97,6 +97,10 @@ void Test::testG8M(std::string picPath)
         MMSolver g8mSolver;
         g8mSolver.FM=keyShape;
         g8mSolver.FMFull=shape;
+        g8mSolver.FixShape=true;
+        g8mSolver.SX0.resize(g8mSolver.FMFull.SB.cols(),1);
+        g8mSolver.SX0.setZero();
+        g8mSolver.SX=g8mSolver.SX0;
         g8mSolver.Solve(KP);
         std::cout<<"g8mSolver.EX:"<<g8mSolver.EX<<std::endl<<std::flush;
         MatF face=g8mSolver.FMFull.Generate(g8mSolver.SX,g8mSolver.EX);
