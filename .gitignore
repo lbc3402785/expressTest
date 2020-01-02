@@ -1,0 +1,11 @@
+release/
+debug/
+build/
+*.pro.*
+*.qmake.*
+Makefile*
+*.jpg
+*.png
+*.obj
+*.pro
+*.zip
