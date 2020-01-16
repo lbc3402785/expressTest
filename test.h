@@ -7,7 +7,8 @@ class Test
 public:
     Test();
     static void testG8M(std::string picPath);
-    static void testObstacleMethod();
+    static void testPerspective(std::string picPath);
+    static void test();
 };
 
 #endif // TEST_H

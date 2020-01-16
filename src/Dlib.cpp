@@ -153,8 +153,6 @@ void DlibFace(Mat img, vector<Rect> &rectangles, vector<vector<Point>> &keypoint
 		faces = detector(cimg);
 	}
 
-	cout << faces.size() << endl;
-
 	// Find the pose of each face.
 	std::vector<dlib::full_object_detection> shapes;
 	for (unsigned long i = 0; i < faces.size(); ++i)
