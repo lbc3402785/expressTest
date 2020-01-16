@@ -137,7 +137,7 @@ void Test::testPerspective(string picPath)
                 KP.col(1).array()-=image.rows/2;
             }
             FaceModel bfmShape;
-            bfmShape.Initialize("E:\\model\\BFMUV.obj.npz",true);
+            bfmShape.Initialize("E:\\model\\BFMUVWM.obj.npz",true);
             Eigen::Matrix3Xf BFMpoints=bfmShape.Face.transpose();
             Eigen::Matrix3Xi BFMFaces=bfmShape.TRI.transpose();
             Eigen::Matrix4Xi colors;
@@ -152,7 +152,7 @@ void Test::testPerspective(string picPath)
             solver.FM=bfmKeyShape;
 //            KP/=solver.fx;
             solver.Solve(KP);
-            solver.SolvePerspective(KP);
+            solver.SolvePerspective2(KP);
             MMSObj(image, solver, "E:\\coding\\git-code\\expressTest\\output\\", "test",true);
             Mat res = MMSDraw(image, solver,KP,true);
             Mat simage;

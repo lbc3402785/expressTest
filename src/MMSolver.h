@@ -5,11 +5,10 @@
 #define CV_AA -1
 #include "cnpy.h"
 #include "NumpyUtil.h"
-#include "ceresnonlinear.hpp"
 #include "ceres/ceres.h"
 #include "ceres/cubic_interpolation.h"
 #include "ceres/rotation.h"
-#include "ceresnonlinear.hpp"
+
 using namespace cv;
 inline cv::Point2f ImageCoordinate(MatF face, int i)
 {
@@ -241,7 +240,7 @@ public:
 };
 
 
-
+#include "ceresnonlinear.hpp"
 
 class MMSolver
 {
@@ -352,8 +351,6 @@ public:
         }
 
         auto X = SolveLinear(SBX/fx, error/fx, lambda);
-
-        cout << "error:"<<error  << endl;
 
         return X;
         //MatF rotated = (model_points + Ax) * R;
@@ -612,7 +609,86 @@ public:
 
 
         }
+        std::cout << "SX:" << SX << std::endl;
+        std::cout << "EX:" << EX << std::endl;
 
+    }
+    void SolvePerspective2(MatF KP)
+    {
+        using namespace fitting;
+        int N = KP.rows();
+        Eigen::Quaternionf q(params.R);
+        std::vector<double> cameraRotation(4,0.0);
+        cameraRotation[0] = q.w();
+        cameraRotation[1] = q.x();
+        cameraRotation[2] = q.y();
+        cameraRotation[3] = q.z();
+        std::vector<double> translation(3,0.0);
+        translation[0]=params.tx;
+        translation[0]=params.ty;
+        translation[2]=450;
+        constexpr int  num_coeffs_fitting=199;
+        constexpr int  num_blendshapes=100;
+        std::vector<double> shape_coefficients(num_coeffs_fitting,0);
+        std::vector<double> blendshape_coefficients(num_blendshapes,0);
+        ceres::Problem problem;
+        for(int i=0;i<N;i++){
+           Eigen::Vector3f dstKeyPoint(KP(i,0),KP(i,1),1);
+           fitting::LandmarkCost* cost=new fitting::LandmarkCost(FM,fx,i,dstKeyPoint);
+           ceres::CostFunction* costFunction=new ceres::AutoDiffCostFunction<fitting::LandmarkCost,2,4,3,num_coeffs_fitting,num_blendshapes>(cost);
+           problem.AddResidualBlock(costFunction,/*new ceres::CauchyLoss(0.5)*/NULL,&cameraRotation[0],&translation[0],&shape_coefficients[0],&blendshape_coefficients[0]);
+        }
+        problem.SetParameterBlockConstant(&shape_coefficients[0]);
+        problem.SetParameterBlockConstant(&blendshape_coefficients[0]);
+        ceres::QuaternionParameterization* cameraFitQuaternionParameterisation = new ceres::QuaternionParameterization();
+        problem.SetParameterization(&cameraRotation[0], cameraFitQuaternionParameterisation);
+        ceres::Solver::Options solverOptions;
+        solverOptions.linear_solver_type = ceres::SPARSE_SCHUR;
+        solverOptions.num_threads = 1;
+        //solverOptions.max_num_iterations=500;
+        solverOptions.minimizer_progress_to_stdout = true;
+        ceres::Solver::Summary solverSummary;
+        ceres::Solve(solverOptions, &problem, &solverSummary);
+        std::cout << solverSummary.BriefReport() << "\n";
+        //---------------------------------
+        problem.SetParameterBlockVariable(&shape_coefficients[0]);
+        problem.SetParameterBlockVariable(&blendshape_coefficients[0]);
+        fitting::PriorCost *shapePrior=new fitting::PriorCost(num_coeffs_fitting, fx);
+        ceres::CostFunction* shapePriorCost =
+                new ceres::AutoDiffCostFunction<fitting::PriorCost, num_coeffs_fitting /* num residuals */,
+                num_coeffs_fitting /* shape-coeffs */>(
+                    shapePrior);
+        problem.AddResidualBlock(shapePriorCost,/* new ceres::CauchyLoss(0.5)*/NULL, &shape_coefficients[0]);
+
+        fitting::PriorCost *blendShapePrior=new fitting::PriorCost(num_blendshapes, fx);
+        ceres::CostFunction* blendshapesPriorCost =
+                new ceres::AutoDiffCostFunction<fitting::PriorCost, num_blendshapes /* num residuals */,
+                num_blendshapes /* bs-coeffs */>(
+                    blendShapePrior);
+        problem.AddResidualBlock(blendshapesPriorCost, NULL, &blendshape_coefficients[0]);
+        ceres::Solve(solverOptions, &problem, &solverSummary);
+        std::cout << solverSummary.BriefReport() << "\n";
+
+
+
+        Eigen::Quaternion<double> qd(cameraRotation[0],cameraRotation[1],cameraRotation[2],cameraRotation[3]);
+        Eigen::Matrix<double, 3, 1> t(translation[0],translation[1],translation[2]);
+        Eigen::Matrix<double,3,3> Rotation=qd.toRotationMatrix();
+        std::cout << "Rotation:" << Rotation << std::endl;
+        std::cout << "t:" << t << std::endl;
+        Eigen::Matrix<float,3,3> Rf=Rotation.cast<float>();
+        Eigen::Matrix<float,3,1> tf=t.cast<float>();
+        params.R=Rf;
+        params.tx=tf(0,0);
+        params.ty=tf(1,0);
+        params.tz=tf(2,0);
+        params.s=1;
+        MatD SXD= Eigen::Map<MatD>(shape_coefficients.data(), Eigen::Index(shape_coefficients.size() / 1), Eigen::Index(1));
+        SX=SXD.cast<float>();
+        std::cout << "SX:" << SX << std::endl;
+        MatD EXD= Eigen::Map<MatD>(blendshape_coefficients.data(), Eigen::Index(blendshape_coefficients.size() / 1), Eigen::Index(1));
+        EX=EXD.cast<float>();
+        std::cout << "EX:" << EX << std::endl;
     }
 };
 

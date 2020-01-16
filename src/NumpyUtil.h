@@ -18,6 +18,7 @@ using namespace Eigen;
 using namespace cnpy;
 
 typedef Eigen::Matrix<float, Dynamic, Dynamic, RowMajor> MatF;
+typedef Eigen::Matrix<double, Dynamic, Dynamic, RowMajor> MatD;
 typedef Eigen::Matrix<int, Dynamic, Dynamic, RowMajor> MatI;
 typedef Eigen::Matrix<float, Dynamic, Dynamic, ColMajor> MatFC;
 typedef Eigen::Matrix<int, Dynamic, Dynamic, ColMajor> MatIC;
